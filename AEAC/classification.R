@@ -62,23 +62,23 @@ rm(list=c("rawData", "rawDataTargets", "dataLocation", "dataLocationTargets"))
 
 # CLASSIFICATION
 data$id = -1
-trainTrainDataSize = floor(nrow(data)/3)
+trainTrainDataSize = floor(nrow(data)/4)
 trainIgnoreDataSize = nrow(data) - trainTrainDataSize
 testDataIndex = c(rep(FALSE, trainTrainDataSize), rep(TRUE, (nrow(targets) + trainIgnoreDataSize)))
 d = rbind(data, targets)
 
 formula = ACTION ~ RESOURCE + MGR_ID + ROLE_ROLLUP_1 + ROLE_ROLLUP_2 + ROLE_DEPTNAME + ROLE_TITLE + ROLE_FAMILY_DESC + ROLE_FAMILY + ROLE_CODE
 
-rf = randomForest(formula=formula, data = d[!testDataIndex,], 
-                  importance=TRUE, proximity=TRUE, na.action=na.roughfix,
-                  kernel="rbfdot", kpar=list(sigma=0.015), C=70, cross=4, prob.model=TRUE)
+svm = svm(formula=formula, data = d[!testDataIndex,], 
+                  importance=TRUE, proximity=TRUE, na.action=na.roughfix, prob.model=TRUE)
+# kernel="rbfdot", kpar=list(sigma=0.015), C=70, cross=4, 
 # pr = predict(rf, d[testDataIndex,])
 # summary(pr)
 
 
 testDataIndex = c(rep(FALSE, trainTrainDataSize + trainIgnoreDataSize), rep(TRUE, nrow(targets)))
-pr = predict(rf, d[testDataIndex,])
+pr = predict(svm, d[testDataIndex,])
 summary(pr)
 
 sampleSubmission$Action = pr
-write.table(sampleSubmission, file = paste0(WD, "/output/data/mySubmission.csv"), na="-1", col.names=TRUE, row.names=FALSE, fileEncoding="", sep=",")
+write.table(sampleSubmission, file = paste0(WD, "/output/data/mySubmission_2.csv"), na="-1", col.names=TRUE, row.names=FALSE, fileEncoding="", sep=",")
