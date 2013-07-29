@@ -4,6 +4,7 @@
 library(e1071)
 library(randomForest)
 library(kernlab)
+library(rpart)
 
 
 # INIT
@@ -19,11 +20,13 @@ WD = getwd()
 
 dataLocation = paste0(WD, "/input/data/train.csv")
 dataLocationTargets = paste0(WD, "/input/data/test.csv")
+sampleSubmission = paste0(WD, "/input/data/sampleSubmission.csv")
 
 
 # LOAD DATA
 rawData = read.csv(dataLocation, header=TRUE, sep=",")
 rawDataTargets = read.csv(dataLocationTargets, header=TRUE, sep=",")
+sampleSubmission = read.csv(sampleSubmission, header=TRUE, sep=",")
 
 
 # TRANSFORM
@@ -59,12 +62,23 @@ rm(list=c("rawData", "rawDataTargets", "dataLocation", "dataLocationTargets"))
 
 # CLASSIFICATION
 data$id = -1
-trainTrainDataSize = floor(nrow(data)/100)
+trainTrainDataSize = floor(nrow(data)/3)
 trainIgnoreDataSize = nrow(data) - trainTrainDataSize
 testDataIndex = c(rep(FALSE, trainTrainDataSize), rep(TRUE, (nrow(targets) + trainIgnoreDataSize)))
 d = rbind(data, targets)
 
-formula = data$ACTION ~ data$RESOURCE + data$MGR_ID + data$ROLE_ROLLUP_1 + data$ROLE_ROLLUP_2 + data$ROLE_DEPTNAME + data$ROLE_TITLE + data$ROLE_FAMILY_DESC + data$ROLE_FAMILY + data$ROLE_CODE
-svm = ksvm(formula, data = d[!testDataIndex,], kernel="rbfdot", kpar=list(sigma=0.015), C=70, cross=4, prob.model=TRUE, na.action=na.roughfix)
-pr = predict(svm, newdata = d[testDataIndex,])
+formula = ACTION ~ RESOURCE + MGR_ID + ROLE_ROLLUP_1 + ROLE_ROLLUP_2 + ROLE_DEPTNAME + ROLE_TITLE + ROLE_FAMILY_DESC + ROLE_FAMILY + ROLE_CODE
 
+rf = randomForest(formula=formula, data = d[!testDataIndex,], 
+                  importance=TRUE, proximity=TRUE, na.action=na.roughfix,
+                  kernel="rbfdot", kpar=list(sigma=0.015), C=70, cross=4, prob.model=TRUE)
+# pr = predict(rf, d[testDataIndex,])
+# summary(pr)
+
+
+testDataIndex = c(rep(FALSE, trainTrainDataSize + trainIgnoreDataSize), rep(TRUE, nrow(targets)))
+pr = predict(rf, d[testDataIndex,])
+summary(pr)
+
+sampleSubmission$Action = pr
+write.table(sampleSubmission, file = paste0(WD, "/output/data/mySubmission.csv"), na="-1", col.names=TRUE, row.names=FALSE, fileEncoding="", sep=",")
