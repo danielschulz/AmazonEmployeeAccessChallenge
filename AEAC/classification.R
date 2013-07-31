@@ -92,18 +92,14 @@ testDataIndex = c(rep(FALSE, trainTrainDataSize + trainIgnoreDataSize), rep(TRUE
 pr = predict(nb, d[testDataIndex,])
 summary(pr)
 
-sampleSubmission$Action = pr$posterior
+sampleSubmission$Action = pr$class
+# sampleSubmission$Action = sampleSubmission$Action[,2]
 
-smooth = function(v) {
-  r = v
-  if (v < 0.25) {
-    r = 0
-  } else if (v > 0.75) {
-    r = 1
-  }
-  return(r)
-}
 
-hist(sampleSubmission$Action)
+# sampleSubmission$Action = as.numeric(sampleSubmission$Action)
+# sampleSubmission$Action = sampleSubmission$Action - 1
+# hist(sampleSubmission$Action)
 
-write.table(sampleSubmission, file = paste0(WD, "/output/data/mySubmission_5.csv"), na="-1", col.names=TRUE, row.names=FALSE, fileEncoding="", sep=",", quote=FALSE)
+sampleSubmission = sampleSubmission[,-3]
+
+write.table(sampleSubmission, file = paste0(WD, "/output/data/mySubmission_5.csv"), na="0", col.names=TRUE, row.names=FALSE, fileEncoding="", sep=",", quote=FALSE)
