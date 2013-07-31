@@ -64,15 +64,19 @@ rm(list=c("rawData", "rawDataTargets", "dataLocation", "dataLocationTargets"))
 
 # CLASSIFICATION
 data$id = -1
-trainTrainDataSize = floor(nrow(data)/300)
+trainTrainDataSize = floor(nrow(data)/100)
 trainIgnoreDataSize = nrow(data) - trainTrainDataSize
 testDataIndex = c(rep(FALSE, trainTrainDataSize), rep(TRUE, (nrow(targets) + trainIgnoreDataSize)))
 d = rbind(data, targets)
 
 formula = ACTION ~ RESOURCE + MGR_ID + ROLE_ROLLUP_1 + ROLE_ROLLUP_2 + ROLE_DEPTNAME + ROLE_TITLE + ROLE_FAMILY_DESC + ROLE_FAMILY + ROLE_CODE
 
+rp = train(formula, data = d[!testDataIndex,], 
+           method = "svmRadial",
+           control = trainControl(method="cv",number=10))
+
 # svm = svm(formula=formula, data = d[!testDataIndex,], 
-#                   importance=TRUE, proximity=TRUE, na.action=na.roughfix, prob.model=TRUE)
+#                  importance=TRUE, proximity=TRUE, na.action=na.roughfix, prob.model=TRUE)
 # kernel="rbfdot", kpar=list(sigma=0.015), C=70, cross=4, 
 # pr = predict(rf, d[testDataIndex,])
 # summary(pr)
@@ -85,14 +89,14 @@ formula = ACTION ~ RESOURCE + MGR_ID + ROLE_ROLLUP_1 + ROLE_ROLLUP_2 + ROLE_DEPT
 # rf = randomForest(formula=formula, data = d[!testDataIndex,c(-11)],
 #        importance=TRUE, proximity=TRUE, na.action=na.roughfix, prob.model=TRUE)
 
-nb = NaiveBayes(d[!testDataIndex,c(-11)], d[!testDataIndex,c(-11)]$ACTION,
-       cv.fold=20, formula=formula, proximity=TRUE, na.action=na.roughfix, prob.model=TRUE)
+# nb = NaiveBayes(d[!testDataIndex,c(-11)], d[!testDataIndex,c(-11)]$ACTION,
+#        cv.fold=20, formula=formula, proximity=TRUE, na.action=na.roughfix, prob.model=TRUE)
 
 testDataIndex = c(rep(FALSE, trainTrainDataSize + trainIgnoreDataSize), rep(TRUE, nrow(targets)))
-pr = predict(nb, d[testDataIndex,])
+pr = predict(svm, d[testDataIndex,])
 summary(pr)
 
-sampleSubmission$Action = as.numeric(pr$posterior[,1])
+sampleSubmission$Action = as.numeric(pr$posterior[,2])
 # sampleSubmission$Action = sampleSubmission$Action - 1
 # sampleSubmission$Action = pr$posterior[,2]
 # sampleSubmission$Action = sampleSubmission$Action[,2]
@@ -103,8 +107,9 @@ sampleSubmission$Action = as.numeric(pr$posterior[,1])
 hist(sampleSubmission$Action)
 sampleSubmission[which(sampleSubmission$Action > 0.9),]$Action = 1
 sampleSubmission[which(sampleSubmission$Action < 0.8),]$Action = 0
+hist(sampleSubmission$Action)
 
 # sampleSubmission = sampleSubmission[,-3]
 # hist(as.numeric(pr$posterior[,1]))
 
-write.table(sampleSubmission, file = paste0(WD, "/output/data/nb_02.csv"), na="0", col.names=TRUE, row.names=FALSE, fileEncoding="", sep=",", quote=FALSE)
+write.table(sampleSubmission, file = paste0(WD, "/output/data/svm_01.csv"), na="0", col.names=TRUE, row.names=FALSE, fileEncoding="", sep=",", quote=FALSE)
