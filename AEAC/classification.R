@@ -33,28 +33,28 @@ sampleSubmission = read.csv(sampleSubmission, header=TRUE, sep=",")
 
 # TRANSFORM
 rawData$ACTION = as.factor(rawData$ACTION)
-rawData$RESOURCE = as.numeric(rawData$RESOURCE)
-rawData$MGR_ID = as.numeric(rawData$MGR_ID)
-rawData$ROLE_ROLLUP_1 = as.numeric(rawData$ROLE_ROLLUP_1)
-rawData$ROLE_ROLLUP_2 = as.numeric(rawData$ROLE_ROLLUP_2)
-rawData$ROLE_DEPTNAME = as.numeric(rawData$ROLE_DEPTNAME)
-rawData$ROLE_TITLE = as.numeric(rawData$ROLE_TITLE)
-rawData$ROLE_FAMILY_DESC = as.numeric(rawData$ROLE_FAMILY_DESC)
-rawData$ROLE_FAMILY = as.numeric(rawData$ROLE_FAMILY)
-rawData$ROLE_CODE = as.numeric(rawData$ROLE_CODE)
+rawData$RESOURCE = as.factor(rawData$RESOURCE)
+rawData$MGR_ID = as.factor(rawData$MGR_ID)
+rawData$ROLE_ROLLUP_1 = as.factor(rawData$ROLE_ROLLUP_1)
+rawData$ROLE_ROLLUP_2 = as.factor(rawData$ROLE_ROLLUP_2)
+rawData$ROLE_DEPTNAME = as.factor(rawData$ROLE_DEPTNAME)
+rawData$ROLE_TITLE = as.factor(rawData$ROLE_TITLE)
+rawData$ROLE_FAMILY_DESC = as.factor(rawData$ROLE_FAMILY_DESC)
+rawData$ROLE_FAMILY = as.factor(rawData$ROLE_FAMILY)
+rawData$ROLE_CODE = as.factor(rawData$ROLE_CODE)
 
 
-rawDataTargets$id = as.numeric(rawDataTargets$id)
+rawDataTargets$id = as.factor(rawDataTargets$id)
 rawDataTargets$ACTION = as.factor(0)
-rawDataTargets$RESOURCE = as.numeric(rawDataTargets$RESOURCE)
-rawDataTargets$MGR_ID = as.numeric(rawDataTargets$MGR_ID)
-rawDataTargets$ROLE_ROLLUP_1 = as.numeric(rawDataTargets$ROLE_ROLLUP_1)
-rawDataTargets$ROLE_ROLLUP_2 = as.numeric(rawDataTargets$ROLE_ROLLUP_2)
-rawDataTargets$ROLE_DEPTNAME = as.numeric(rawDataTargets$ROLE_DEPTNAME)
-rawDataTargets$ROLE_TITLE = as.numeric(rawDataTargets$ROLE_TITLE)
-rawDataTargets$ROLE_FAMILY_DESC = as.numeric(rawDataTargets$ROLE_FAMILY_DESC)
-rawDataTargets$ROLE_FAMILY = as.numeric(rawDataTargets$ROLE_FAMILY)
-rawDataTargets$ROLE_CODE = as.numeric(rawDataTargets$ROLE_CODE)
+rawDataTargets$RESOURCE = as.factor(rawDataTargets$RESOURCE)
+rawDataTargets$MGR_ID = as.factor(rawDataTargets$MGR_ID)
+rawDataTargets$ROLE_ROLLUP_1 = as.factor(rawDataTargets$ROLE_ROLLUP_1)
+rawDataTargets$ROLE_ROLLUP_2 = as.factor(rawDataTargets$ROLE_ROLLUP_2)
+rawDataTargets$ROLE_DEPTNAME = as.factor(rawDataTargets$ROLE_DEPTNAME)
+rawDataTargets$ROLE_TITLE = as.factor(rawDataTargets$ROLE_TITLE)
+rawDataTargets$ROLE_FAMILY_DESC = as.factor(rawDataTargets$ROLE_FAMILY_DESC)
+rawDataTargets$ROLE_FAMILY = as.factor(rawDataTargets$ROLE_FAMILY)
+rawDataTargets$ROLE_CODE = as.factor(rawDataTargets$ROLE_CODE)
 
 
 data = rawData
@@ -64,7 +64,7 @@ rm(list=c("rawData", "rawDataTargets", "dataLocation", "dataLocationTargets"))
 
 # CLASSIFICATION
 data$id = -1
-trainTrainDataSize = floor(nrow(data)/3)
+trainTrainDataSize = floor(nrow(data)/300)
 trainIgnoreDataSize = nrow(data) - trainTrainDataSize
 testDataIndex = c(rep(FALSE, trainTrainDataSize), rep(TRUE, (nrow(targets) + trainIgnoreDataSize)))
 d = rbind(data, targets)
@@ -82,18 +82,18 @@ formula = ACTION ~ RESOURCE + MGR_ID + ROLE_ROLLUP_1 + ROLE_ROLLUP_2 + ROLE_DEPT
 #               form=formula,
 #               trControl=trcon, na.action=na.roughfix)
 
-rf = randomForest(formula=formula, data = d[!testDataIndex,c(-11)],
-       importance=TRUE, proximity=TRUE, na.action=na.roughfix, prob.model=TRUE)
+# rf = randomForest(formula=formula, data = d[!testDataIndex,c(-11)],
+#        importance=TRUE, proximity=TRUE, na.action=na.roughfix, prob.model=TRUE)
 
-# nb = NaiveBayes(d[!testDataIndex,c(-11)], d[!testDataIndex,c(-11)]$ACTION,
-#         cv.fold=20, formula=formula, proximity=TRUE, na.action=na.roughfix, prob.model=TRUE)
+nb = NaiveBayes(d[!testDataIndex,c(-11)], d[!testDataIndex,c(-11)]$ACTION,
+       cv.fold=20, formula=formula, proximity=TRUE, na.action=na.roughfix, prob.model=TRUE)
 
 testDataIndex = c(rep(FALSE, trainTrainDataSize + trainIgnoreDataSize), rep(TRUE, nrow(targets)))
-pr = predict(rf, d[testDataIndex,])
+pr = predict(nb, d[testDataIndex,])
 summary(pr)
 
-sampleSubmission$Action = as.numeric(pr)
-sampleSubmission$Action = sampleSubmission$Action - 1
+sampleSubmission$Action = as.numeric(pr$posterior[,1])
+# sampleSubmission$Action = sampleSubmission$Action - 1
 # sampleSubmission$Action = pr$posterior[,2]
 # sampleSubmission$Action = sampleSubmission$Action[,2]
 
@@ -101,10 +101,10 @@ sampleSubmission$Action = sampleSubmission$Action - 1
 # sampleSubmission$Action = as.numeric(sampleSubmission$Action)
 # sampleSubmission$Action = sampleSubmission$Action - 1
 hist(sampleSubmission$Action)
-sampleSubmission[sampleSubmission$ACTION > 0.96]$ACTION = 1
-sampleSubmission[sampleSubmission$ACTION < 0.85]$ACTION = 0
+sampleSubmission[which(sampleSubmission$Action > 0.9),]$Action = 1
+sampleSubmission[which(sampleSubmission$Action < 0.8),]$Action = 0
 
 # sampleSubmission = sampleSubmission[,-3]
 # hist(as.numeric(pr$posterior[,1]))
 
-write.table(sampleSubmission, file = paste0(WD, "/output/data/rf_pruned_01.csv"), na="0", col.names=TRUE, row.names=FALSE, fileEncoding="", sep=",", quote=FALSE)
+write.table(sampleSubmission, file = paste0(WD, "/output/data/nb_02.csv"), na="0", col.names=TRUE, row.names=FALSE, fileEncoding="", sep=",", quote=FALSE)
