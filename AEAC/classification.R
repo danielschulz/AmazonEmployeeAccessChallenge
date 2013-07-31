@@ -32,7 +32,7 @@ sampleSubmission = read.csv(sampleSubmission, header=TRUE, sep=",")
 
 
 # TRANSFORM
-rawData$ACTION = as.numeric(rawData$ACTION)
+rawData$ACTION = as.factor(rawData$ACTION)
 rawData$RESOURCE = as.numeric(rawData$RESOURCE)
 rawData$MGR_ID = as.numeric(rawData$MGR_ID)
 rawData$ROLE_ROLLUP_1 = as.numeric(rawData$ROLE_ROLLUP_1)
@@ -45,7 +45,7 @@ rawData$ROLE_CODE = as.numeric(rawData$ROLE_CODE)
 
 
 rawDataTargets$id = as.numeric(rawDataTargets$id)
-rawDataTargets$ACTION = as.numeric(0)
+rawDataTargets$ACTION = as.factor(0)
 rawDataTargets$RESOURCE = as.numeric(rawDataTargets$RESOURCE)
 rawDataTargets$MGR_ID = as.numeric(rawDataTargets$MGR_ID)
 rawDataTargets$ROLE_ROLLUP_1 = as.numeric(rawDataTargets$ROLE_ROLLUP_1)
@@ -64,7 +64,7 @@ rm(list=c("rawData", "rawDataTargets", "dataLocation", "dataLocationTargets"))
 
 # CLASSIFICATION
 data$id = -1
-trainTrainDataSize = floor(nrow(data)/3)
+trainTrainDataSize = floor(nrow(data)/1)
 trainIgnoreDataSize = nrow(data) - trainTrainDataSize
 testDataIndex = c(rep(FALSE, trainTrainDataSize), rep(TRUE, (nrow(targets) + trainIgnoreDataSize)))
 d = rbind(data, targets)
@@ -82,15 +82,28 @@ formula = ACTION ~ RESOURCE + MGR_ID + ROLE_ROLLUP_1 + ROLE_ROLLUP_2 + ROLE_DEPT
 #               form=formula,
 #               trControl=trcon, na.action=na.roughfix)
 
-rf = randomForest(formula=formula, data = d[!testDataIndex,], 
-         importance=TRUE, proximity=TRUE, na.action=na.roughfix, prob.model=TRUE)
+# rf = randomForest(formula=formula, data = d[!testDataIndex,], 
+#          importance=TRUE, proximity=TRUE, na.action=na.roughfix, prob.model=TRUE)
 
-# rf = naiveBayes(d[!testDataIndex,-1], d[!testDataIndex,]$ACTION,
-#           cv.fold=3, formula=formula, proximity=TRUE, na.action=na.roughfix, prob.model=TRUE)
+nb = NaiveBayes(d[!testDataIndex,c(-11)], d[!testDataIndex,c(-11)]$ACTION,
+         cv.fold=20, formula=formula, proximity=TRUE, na.action=na.roughfix, prob.model=TRUE)
 
 testDataIndex = c(rep(FALSE, trainTrainDataSize + trainIgnoreDataSize), rep(TRUE, nrow(targets)))
-pr = predict(rf, d[testDataIndex,])
+pr = predict(nb, d[testDataIndex,])
 summary(pr)
 
-sampleSubmission$Action = pr
-write.table(sampleSubmission, file = paste0(WD, "/output/data/mySubmission_4.csv"), na="-1", col.names=TRUE, row.names=FALSE, fileEncoding="", sep=",")
+sampleSubmission$Action = pr$posterior
+
+smooth = function(v) {
+  r = v
+  if (v < 0.25) {
+    r = 0
+  } else if (v > 0.75) {
+    r = 1
+  }
+  return(r)
+}
+
+hist(sampleSubmission$Action)
+
+write.table(sampleSubmission, file = paste0(WD, "/output/data/mySubmission_5.csv"), na="-1", col.names=TRUE, row.names=FALSE, fileEncoding="", sep=",", quote=FALSE)
